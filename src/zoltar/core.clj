@@ -10,8 +10,12 @@
 
 (defrecord FlooredDistribution [dist floor]
   Distribution
-  (prob [this x] (max floor (/ (get dist x 0) (max 1 (reduce + (vals dist))))))
-  (add-point [this x] (do (inc-map dist x))))
+  (prob [this x]
+	(max floor
+	     (/ (get dist x 0)
+		(max 1 (reduce + (vals dist))))))
+  (add-point [this x] (assoc this :dist (inc-map dist x))))
+
 
 
 
