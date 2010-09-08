@@ -50,6 +50,13 @@
 (defn annotated-max [x y]
   (if (> (last x) (last y)) x y))
 
+(defn log2 [x]
+  (let [divisor (Math/log 2)]
+    (/ (Math/log x) divisor)))
+
+(defn log+ [x y]
+  (+ (log2 x) (log2 y)))
+
 ; category is a vector of testers
 ; categories is a map from name -> category
 (defrecord NaiveBayesModel [categories]
@@ -63,7 +70,7 @@
     (first
       (reduce annotated-max
         (for [[x y] (seq categories)]
-          [x (reduce * (map test-tester y (repeat sample)))]))))
+          [x (reduce log+ (map test-tester y (repeat sample)))]))))
   (compile-model [this] this)) ;TODO: exclude irrelevant feature testers
 
 (defn naive-bayes-model [] (NaiveBayesModel. {}))
