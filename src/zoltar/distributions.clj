@@ -7,17 +7,50 @@
   (prob [dist x] "Probability of equality to a particular point")
   (add-point [dist x] "Adds a sample point to the distribution"))
 
-(defn inc-map [map key]
-  (assoc map key (+ 1 (get map key 0))))
+(defn inc-map [map key size]
+  (assoc map key (+ size (get map key 0))))
+
+(defn raw-prob [dist point]
+  (/ (get dist point 0)
+     (max 1 (reduce + (vals dist)))))
 
 (defrecord FlooredDistribution [dist floor]
   Distribution
-  (prob [this x]
-	(max floor
-	     (/ (get dist x 0)
-		(max 1 (reduce + (vals dist))))))
-  (add-point [this x] (assoc this :dist (inc-map dist x))))
+  (prob [this x] (max floor (raw-prob dist x)))
+  (add-point [this x] (assoc this :dist (inc-map dist x 1))))
+
+(defrecord LinearSandpileDistribution [dist floor radius]
+  Distribution
+  (prob [this x] (max floor (raw-prob dist x)))
+  (add-point [this x]
+    (loop [i (- radius)
+           d dist]
+      (do
+	(if (< i radius)
+	  (recur (inc i)
+		 (inc-map d (+ x i) (inc (- radius (Math/abs i)))))
+	  (assoc this :dist d))))))
+
+(memoize (defn pow2 [x]
+  (if (= x 0) 1 (* 2 (pow2 (dec x)))))) ; quick hack, will replace impl
+
+(defrecord ExponentialSandpileDistribution [dist floor radius]
+  Distribution
+  (prob [this x] (max floor (raw-prob dist x)))
+  (add-point [this x]
+    (loop [i (- radius)
+           d dist]
+      (do
+	(if (< i radius)
+	  (recur (inc i)
+		 (inc-map d (+ x i) (pow2 (inc (- radius (Math/abs i))))))
+	  (assoc this :dist d))))))
 
 (defn floored-distribution []
   (FlooredDistribution. {} 0.01))
 
+(defn linear-sandpile-distribution []
+  (LinearSandpileDistribution. {} 0.01 3))
+
+(defn exponential-sandpile-distribution []
+  (ExponentialSandpileDistribution. {} 0.01 3))
