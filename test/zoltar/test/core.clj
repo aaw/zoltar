@@ -1,7 +1,9 @@
 (ns zoltar.test.core
   (:use [zoltar.core] :reload)
+  (:use [zoltar.distributions] :reload)
+  (:use [zoltar.feature_testers] :reload)
   (:use [clojure.test])
-  (:import [zoltar.core FlooredDistribution]))
+  (:import [zoltar.distributions FlooredDistribution]))
 
 (deftest test-floor
   (testing
@@ -26,8 +28,8 @@
 
 (deftest test-classify
   (testing
-      (is (= "long"
+      (is (= :long
 	     (-> (naive-bayes-model)
-		 (train "a" "short")
-		 (train "fasdfsa" "long")
+		 (train "a" :short)
+		 (train "fasdfsa" :long)
 		 (classify "abcdefg"))))))
