@@ -14,6 +14,14 @@
   (/ (get dist point 0)
      (max 1 (reduce + (vals dist)))))
 
+(defn bump-map [dist point radius finc]
+  (loop [i (- radius)
+	 d dist]
+    (if (<= i radius)
+      (recur (inc i)
+	     (inc-map d (+ point i) (finc (inc (- radius (Math/abs i))))))
+      d)))
+
 (defrecord FlooredDistribution [dist floor]
   Distribution
   (prob [this x] (max floor (raw-prob dist x)))
@@ -22,14 +30,7 @@
 (defrecord LinearSandpileDistribution [dist floor radius]
   Distribution
   (prob [this x] (max floor (raw-prob dist x)))
-  (add-point [this x]
-    (loop [i (- radius)
-           d dist]
-      (do
-	(if (< i radius)
-	  (recur (inc i)
-		 (inc-map d (+ x i) (inc (- radius (Math/abs i)))))
-	  (assoc this :dist d))))))
+  (add-point [this x] (assoc this :dist (bump-map dist x radius identity))))
 
 (memoize (defn pow2 [x]
   (if (= x 0) 1 (* 2 (pow2 (dec x)))))) ; quick hack, will replace impl
@@ -37,15 +38,8 @@
 (defrecord ExponentialSandpileDistribution [dist floor radius]
   Distribution
   (prob [this x] (max floor (raw-prob dist x)))
-  (add-point [this x]
-    (loop [i (- radius)
-           d dist]
-      (do
-	(if (< i radius)
-	  (recur (inc i)
-		 (inc-map d (+ x i) (pow2 (inc (- radius (Math/abs i))))))
-	  (assoc this :dist d))))))
-
+  (add-point [this x] (assoc this :dist (bump-map dist x radius pow2))))
+	     
 (defn floored-distribution []
   (FlooredDistribution. {} 0.01))
 
