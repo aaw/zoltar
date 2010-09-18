@@ -6,12 +6,13 @@
 (defn count-occur [string item]
   (reduce + (map (fn [x] (if (= (str x) item) 1 0)) string)))
 
-(defn new-category []
-  [{:dist (floored-distribution)
+(defn make-basic-categories []
+  [{:dist (exponential-sandpile-distribution)
     :testfunc (fn [x] (count x)) }
-   {:dist (floored-distribution)
+   {:dist (exponential-sandpile-distribution)
     :testfunc (fn [x] (count-occur x " ")) }
-   {:dist (floored-distribution)
+   {:dist (exponential-sandpile-distribution)
     :testfunc (fn [x] (count-occur x "-")) }])
+
 
 
