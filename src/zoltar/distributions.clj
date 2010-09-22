@@ -10,9 +10,12 @@
 (defn inc-map [map key size]
   (assoc map key (+ size (get map key 0))))
 
+(memoize (defn distribution-image-size [dist]
+	   (reduce + (vals dist))))
+
 (defn raw-prob [dist point]
   (/ (get dist point 0)
-     (max 1 (reduce + (vals dist)))))
+     (max 1 (distribution-image-size dist))))
 
 ; TODO: redo with map and reduce with merge to combine maps
 (defn bump-map [dist point radius finc]
@@ -20,9 +23,10 @@
 	 d dist]
     (if (<= i radius)
       (recur (inc i)
-	     (inc-map d (+ point i) (finc (inc (- radius (Math/abs i))))))
+	     (inc-map d (+ point i) (finc (inc (- radius (if (>= 0 i) i (- i)))))))
       d)))
 
+; TODO: don't take floor as an argument, make floor a function of the size of the distribution
 (defrecord FlooredDistribution [dist floor]
   Distribution
   (prob [this x] (max floor (raw-prob dist x)))
@@ -48,7 +52,7 @@
   (FlooredDistribution. {} 0.01))
 
 (defn linear-sandpile-distribution []
-  (LinearSandpileDistribution. {} 0.01 3))
+  (LinearSandpileDistribution. {} 0.01 2))
 
 (defn exponential-sandpile-distribution []
-  (ExponentialSandpileDistribution. {} 0.01 3))
+  (ExponentialSandpileDistribution. {} 0.01 2))

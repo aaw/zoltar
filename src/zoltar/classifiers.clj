@@ -22,11 +22,7 @@
   (compile-model [this] ""))
 
 (defn annotated-max [x y]
-  (if (> (last x) (last y)) x y))
-
-(defn log2 [x]
-  (let [divisor (Math/log 2)]
-    (/ (Math/log x) divisor)))
+  (if (> (:score x) (:score y)) x y))
 
 ; category is a vector of testers
 ; categories is a map from name -> category
@@ -36,10 +32,9 @@
     (assoc this :categories
       (assoc categories category
         (vec (for [tester (get categories category (create-category))]
-	       (train-tester tester sample weight)))))) 
+	       (train-tester tester sample weight))))))
   (classify [this sample]
-    (first
-      (reduce annotated-max
+    (:category (reduce annotated-max
         (for [[x y] (seq categories)]
-          [x (reduce + (map log2 (map test-tester y (repeat sample))))]))))
-  (compile-model [this] this)) ;TODO: exclude irrelevant feature testers
+	  {:category x :score (reduce * (map test-tester y (repeat sample)))}))))
+  (compile-model [this] this)) ;TODO: exclude irrelevant feature testers?
