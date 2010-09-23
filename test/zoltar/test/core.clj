@@ -3,35 +3,33 @@
   (:use [zoltar.classifiers] :reload)
   (:use [zoltar.distributions] :reload)
   (:use [zoltar.feature_testers] :reload)
-  (:use [zoltar.boosting] :reload)
   (:use [clojure.test])
   (:import [zoltar.distributions FlooredDistribution]
-	   [zoltar.distributions LinearSandpileDistribution]
-	   [zoltar.distributions ExponentialSandpileDistribution]))
+	   [zoltar.distributions SandpileDistribution]))
 
 (deftest test-floored-distribution
   (testing
-    (is (= (prob (FlooredDistribution. {} 0.123) "nothing") 0.123))
-    (is (= (prob (FlooredDistribution. {:a 1} 0.01) :a) 1))
-    (is (= (prob (-> (FlooredDistribution. {} 0.01)
+    (is (= (prob (FlooredDistribution. {} 0.123 0) "nothing") 0.123))
+    (is (= (prob (FlooredDistribution. {:a 1} 0.01 0) :a) 1))
+    (is (= (prob (-> (FlooredDistribution. {} 0.01 0)
 		     (add-point :a 1)) :a) 1))
-    (is (= (prob (-> (FlooredDistribution. {} 0.01)
+    (is (= (prob (-> (FlooredDistribution. {} 0.01 0)
 		     (add-point :a 1)
 		     (add-point :b 1)
 		     (add-point :c 1)
 		     (add-point :b 1)) :b) 1/2))
-    (is (= (prob (-> (FlooredDistribution. {} 0.0002)
+    (is (= (prob (-> (FlooredDistribution. {} 0.0002 0)
 		     (add-point :a 1)
 		     (add-point :b 1)
 		     (add-point :c 1)) :d) 0.0002))
-    (is (= (prob (-> (FlooredDistribution. {} 0.0001)
+    (is (= (prob (-> (FlooredDistribution. {} 0.0001 0)
 		     (add-point :a 1)
 		     (add-point :b 2)
 		     (add-point :c 3)) :b) 1/3))))
 
 (deftest test-linear-sandpile-distribution
   (testing
-    (let [dist (-> (LinearSandpileDistribution. {} 0.03 2)
+    (let [dist (-> (SandpileDistribution. {} 0.03 2 0 identity)
 		   (add-point 15 1)
 		   (add-point 10 1))]
       (is (= (prob dist 15) (prob dist 10)))
@@ -47,7 +45,7 @@
 
 (deftest test-exponential-sandpile-distribution
   (testing
-    (let [dist (-> (ExponentialSandpileDistribution. {} 0.007 3)
+    (let [dist (-> (SandpileDistribution. {} 0.007 3 0 pow2)
                    (add-point 52 1)
 		   (add-point 10 1))]
       (is (= (prob dist 52) (prob dist 10)))
@@ -62,13 +60,13 @@
 (deftest test-training
   (testing
     (is (= 1/3
-	   (-> { :dist (FlooredDistribution. {} 0.0) :testfunc count }
+	   (-> { :dist (FlooredDistribution. {} 0.0 0) :testfunc count }
 	       (train-tester "aaa" 1)
 	       (train-tester "abc" 1)
 	       (train-tester "adss" 1)
 	       (test-tester "1234"))))
     (is (= 0.001
-	   (-> { :dist (FlooredDistribution. {} 0.001) :testfunc count }
+	   (-> { :dist (FlooredDistribution. {} 0.001 0) :testfunc count }
 	       (train-tester "a" 1)
 	       (train-tester "aa" 1)
 	       (train-tester "aaa" 1)
@@ -86,8 +84,12 @@
 	   (-> (naive-bayes-model)
 	       (train "a" :short 1)
 	       (train "ba" :short 1)
-	       (train "sdfs" :long 1)
-	       (train "asdfd" :long 1)
+	       (train "xx" :short 1)
+	       (train "y" :short 1)
+	       (train "sdfsa" :long 1)
+	       (train "asdfda" :long 1)
+	       (train "ssssa" :long 1)
+	       (train "asdfda" :long 1)
 	       (classify "ad"))))))
 
 (deftest test-normalize
