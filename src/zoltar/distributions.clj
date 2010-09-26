@@ -13,15 +13,17 @@
 (defn raw-prob [dist point image-size]
   (/ (get dist point 0) (max 1 image-size)))
 
-; TODO: redo with map and reduce with merge to combine maps
-(defn bump-map [dist point radius finc]
-  (loop [i (- radius)
-	 d dist]
-    (if (<= i radius)
-      (recur (inc i)
-	     (inc-map d (+ point i) (finc (inc (- radius (if (>= i 0) i (- i)))))))
-      d)))
+(defn triangle-sequence [n] (take n (iterate inc 1)))
 
+; quick hack, will replace impl
+(memoize (defn pow2 [x] (if (= x 0) 1 (* 2 (pow2 (dec x)))))) 
+
+(defn bump-map [dist point radius finc]
+  (let [r+ (inc radius)
+	make-point (fn [^Integer x]
+		     {(+ x point) (finc (- r+ (Math/abs x)))})]		  
+    (merge-with + dist
+      (apply merge (map make-point (range (- radius) r+))))))
 
 ; TODO: don't take floor as an argument, make floor a function of the size of the distribution
 (defrecord FlooredDistribution [dist floor image-size]
@@ -31,8 +33,6 @@
     (-> this
       (assoc :image-size (+ weight (get this :image-size 0)))
       (assoc :dist (inc-map dist x weight)))))
-
-(defn triangle-sequence [n] (take n (iterate inc 1)))
 
 (defrecord SandpileDistribution [dist floor radius image-size scale-point]
   Distribution
@@ -44,9 +44,6 @@
 				(reduce + (map finc (triangle-sequence (inc radius))))
 				(get this :image-size 0)))
 	  (assoc :dist (bump-map dist x radius finc))))))
-
-(memoize (defn pow2 [x]
-  (if (= x 0) 1 (* 2 (pow2 (dec x)))))) ; quick hack, will replace impl
 
 (defn floored-distribution []
   (FlooredDistribution. {} 0.01 0))
