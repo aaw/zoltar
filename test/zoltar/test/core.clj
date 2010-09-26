@@ -56,7 +56,20 @@
       (is (= (* 2 (prob dist 49) (prob dist 50))))
       (is (= (* 2 (prob dist 50) (prob dist 51))))
       (is (= (* 2 (prob dist 51) (prob dist 52)))))))
-	
+
+(deftest test-bump-map
+  (testing
+    (is (= { 4 1  5 2  6 3  7 2  8 1 }
+	   (bump-map {} 6 2 identity)))
+    (is (= { 4 3  5 6  6 9  7 6  8 3 }
+	   (bump-map {} 6 2 (partial * 3))))
+    (is (= { 701 1 }
+	   (bump-map {} 701 0 identity)))
+    (is (= { 4 1  5 2  6 3  7 3  8 3  9 3  10 2  11 1 }
+	   (-> {}
+	       (bump-map 6 2 identity)
+	       (bump-map 9 2 identity))))))
+
 (deftest test-training
   (testing
     (is (= 1/3
