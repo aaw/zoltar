@@ -14,9 +14,6 @@
 (defn raw-prob [dist point image-size]
   (/ (get dist point 0) (max 1 image-size)))
 
-; todo: remove this, can do the same thing with range. don't know why this seemed like a good idea...
-(defn triangle-sequence [n] (take n (iterate inc 1)))
-
 ; quick hack, will replace impl
 (memoize (defn pow2 [x] (if (= x 0) 1 (* 2 (pow2 (dec x)))))) 
 
@@ -46,8 +43,8 @@
   (add-point [this x weight]
     (let [finc (comp (partial * weight) scale-point)]
       (-> this
-	  (assoc :image-size (+ (reduce + (map finc (triangle-sequence radius)))
-				(reduce + (map finc (triangle-sequence (inc radius))))
+	  (assoc :image-size (+ (reduce + (map finc (range 1 (inc radius))))
+				(reduce + (map finc (range 1 (inc (inc radius)))))
 				(get this :image-size 0)))
 	  (assoc :dist (bump-map dist x radius finc)))))
   (merge-dist [this other]
