@@ -5,7 +5,8 @@
 (defprotocol Distribution
   "Represents a probability mass function"
   (prob [dist x] "Probability of equality to a particular point")
-  (add-point [dist x weight] "Adds a sample point to the distribution"))
+  (add-point [dist x weight] "Adds a sample point to the distribution")
+  (merge-dist [dist1 dist2] "Merges two distributions"))
 
 (defn inc-map [map key size]
   (assoc map key (+ size (get map key 0))))
@@ -13,6 +14,7 @@
 (defn raw-prob [dist point image-size]
   (/ (get dist point 0) (max 1 image-size)))
 
+; todo: remove this, can do the same thing with range. don't know why this seemed like a good idea...
 (defn triangle-sequence [n] (take n (iterate inc 1)))
 
 ; quick hack, will replace impl
@@ -32,7 +34,11 @@
   (add-point [this x weight]
     (-> this
       (assoc :image-size (+ weight (get this :image-size 0)))
-      (assoc :dist (inc-map dist x weight)))))
+      (assoc :dist (inc-map dist x weight))))
+  (merge-dist [this other]
+    (-> this
+	(assoc :image-size (+ image-size (:image-size other)))
+	(assoc :dist (merge-with + dist (:dist other))))))
 
 (defrecord SandpileDistribution [dist floor radius image-size scale-point]
   Distribution
@@ -43,7 +49,12 @@
 	  (assoc :image-size (+ (reduce + (map finc (triangle-sequence radius)))
 				(reduce + (map finc (triangle-sequence (inc radius))))
 				(get this :image-size 0)))
-	  (assoc :dist (bump-map dist x radius finc))))))
+	  (assoc :dist (bump-map dist x radius finc)))))
+  (merge-dist [this other]
+    (-> this
+	(assoc :image-size (+ image-size (:image-size other)))
+	(assoc :dist (merge-with + dist (:dist other))))))
+
 
 (defn floored-distribution []
   (FlooredDistribution. {} 0.01 0))

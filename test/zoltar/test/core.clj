@@ -70,39 +70,23 @@
 	       (bump-map 6 2 identity)
 	       (bump-map 9 2 identity))))))
 
-(deftest test-training
-  (testing
-    (is (= 1/3
-	   (-> { :dist (FlooredDistribution. {} 0.0 0) :testfunc count }
-	       (train-tester "aaa" 1)
-	       (train-tester "abc" 1)
-	       (train-tester "adss" 1)
-	       (test-tester "1234"))))
-    (is (= 0.001
-	   (-> { :dist (FlooredDistribution. {} 0.001 0) :testfunc count }
-	       (train-tester "a" 1)
-	       (train-tester "aa" 1)
-	       (train-tester "aaa" 1)
-	       (train-tester "aaaa" 1)
-	       (test-tester "aaaaa"))))))
-
 (deftest test-classify
   (testing
     (is (= :long
 	   (-> (naive-bayes-model)
-	       (train "a" :short 1)
-	       (train "fasdfsa" :long 1)
+	       (train [{:sample "a" :category :short}
+		       {:sample "fasdfsa" :category :long}])
 	       (classify "abcdefg"))))
     (is (= :short
 	   (-> (naive-bayes-model)
-	       (train "a" :short 1)
-	       (train "ba" :short 1)
-	       (train "xx" :short 1)
-	       (train "y" :short 1)
-	       (train "sdfsa" :long 1)
-	       (train "asdfda" :long 1)
-	       (train "ssssa" :long 1)
-	       (train "asdfda" :long 1)
+	       (train [{:sample "a"      :category :short}
+		       {:sample "ba"     :category :short}
+                       {:sample "xx"     :category :short}
+		       {:sample "y"      :category :short}
+		       {:sample "sdfsa"  :category :long}
+		       {:sample "asdfda" :category :long}
+		       {:sample "ssssa"  :category :long}
+		       {:sample "asdfda" :category :long}])
 	       (classify "ad"))))))
 
 (deftest test-normalize
@@ -117,8 +101,8 @@
 (deftest test-boostable-bayes
   (testing
     (is (= :C
-	     (-> (boosted-bayes [{:category :A :features [12]}
-				 {:category :B :features [2]}
-				 {:category :C :features [100]}]
+	     (-> (boosted-bayes [{:category :A :sample [12]}
+				 {:category :B :sample [2]}
+				 {:category :C :sample [100]}]
 				[1 1 1])
 		 (classify [100]))))))

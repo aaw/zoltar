@@ -6,39 +6,78 @@
 
 ;tester is a map of the form:
 ;  { :dist Distribution :testfunc TestFunction }
-(defn train-tester [tester sample weight]
+(defn train-tester [testers sample-map]
   ""
-  (assoc tester :dist
-    (add-point (tester :dist) ((tester :testfunc) sample) weight)))
+  (let [{:keys [sample category weight] :or {weight 1}} sample-map
+	add-single-point (fn [tester]
+			   (add-point (:dist tester) ((:testfunc tester) sample) weight))
+	reconstruct-tester (fn [orig-tester new-dist]
+			     {:testfunc (:testfunc orig-tester) :dist new-dist})]
+    {:category category :features (map reconstruct-tester testers (map add-single-point testers))}))
 
 (defn test-tester [tester sample]
-  ""
-  (prob (tester :dist) ((tester :testfunc) sample)))
+  (prob (:dist tester) ((:testfunc tester) sample)))
 
 (defprotocol Model
   ""
-  (train [this sample category weight] "")
-  (classify [this sample] "")
-  (compile-model [this] ""))
+  (train [this samples]
+	  "samples is a sequence of maps. Each map must have
+          the keys :sample and :category, and can have a non-negative
+          integer :weight. Defining a sample with weight x is equivalent
+          to repeating the sample x times in the samples sequence")
+  (classify [this sample]
+	    "Given a sample, returns the category that best matches
+             that sample based on the training data."))
 
 (defn max-score [x y]
   (if (> (:score x) (:score y)) x y))
 
-; category is a vector of testers
-; categories is a map from name -> category
+; category is a seq of {:category :features ({:dist :testfunc}, ...)}
+(defn merge-features [features1 features2]
+  "Merges two feature sets by summing their distributions. Both
+   features1 and features2 are sequences of the form
+   ({:dist x1 :testfunc y1}, ..., {:dist xn :testfunc yn}). It's
+   assumed that these sequences have the same testfuncs in the
+   same order."
+  (let [merge-feature (fn [{d1 :dist func1 :testfunc}
+			   {d2 :dist func2 :testfunc}] 
+			{:dist (merge-dist d1 d2)
+			 :testfunc func1})]
+    (map merge-feature features1 features2)))
+
+(defn combine-categories [category-seq initial-category]
+  "Combines equivalent categories in a sequence. Categories
+   are maps of the form:
+
+   {:category x1 :features ({:dist y1 :testfunc z1}, ...)}
+
+   We end up with a sequence of these maps and want to combine
+   equivalent categories so that we have a sequence that contains
+   exactly one map per category. For equivalent categories, we
+   use merge-features to merge their feature sequences."
+  (loop [cseq category-seq
+	 seen-map {}]
+    (if (not (seq cseq))
+      (map (fn [[x y]] {:category x :features y}) (seq seen-map))
+      (let [remaining (rest cseq)
+	    {category :category features :features} (first cseq)
+	    existing-features (get seen-map category initial-category)]
+	(recur remaining (assoc seen-map category (merge-features features existing-features)))))))
+
+; categories is a map from category name -> sequence of testers
+; testers are distribution + test function
 (defrecord NaiveBayesModel [categories create-category]
   Model
-  (train [this sample category weight]
-    (assoc this :categories
-      (assoc categories category
-        (vec (for [tester (get categories category (create-category))]
-	       (train-tester tester sample weight))))))
-  (classify [this sample]
+  (train [this samples]
+    (let [initial-category (create-category)]
+	 (assoc this :categories
+		(combine-categories (map train-tester (repeat initial-category) samples) initial-category))))
+  (classify [this sample] 
     (:category (reduce max-score
-        (for [[x y] (seq categories)]
-	  {:category x :score (reduce * (map test-tester y (repeat sample)))}))))
-  (compile-model [this] this)) ;TODO: exclude irrelevant feature testers?
-
+		       (for [{category :category features :features} (seq categories)]
+			 (let [score (reduce * (map test-tester features (repeat sample)))]
+			   {:category category :score score}))))))
+  
 (defn generic-indicator [classifier point match-val non-match-val]
   (if (= (classify classifier (:features point)) (:category point)) match-val non-match-val))
 
@@ -63,7 +102,7 @@
 (defn parse-file-line [^String line]
   (let [line-seq (seq (.split line ","))]
     {:category (first line-seq)
-     :features (map #(Integer/parseInt %) (rest line-seq))}))
+     :sample (map #(Integer/parseInt %) (rest line-seq))}))
 
 ; /home/aaron/development/machine-learning-datasets/letter-recognition.data.txt
 (defn read-data [^String filename]
@@ -80,19 +119,12 @@
 ; 100 iterations on 100 samples -> 27
 (defn boosted-bayes [all-data all-weights]
   (let [dist (floored-distribution)
-	data-width (count (:features (first all-data)))
+	data-width (count (:sample (first all-data)))
 	make-category (fn [] (vec (for [i (range data-width)]
 				    {:dist dist :testfunc #(nth % i)})))
-	initial-model (NaiveBayesModel. {} make-category)]
-    (loop [model initial-model
-	   data all-data
-	   weights all-weights]
-      (let [{category :category sample :features} (first data)]
-	(if (seq data)
-	  (recur (train model sample category (first weights))
-		 (rest data)
-		 (rest weights))
-	  model)))))
+	initial-model (NaiveBayesModel. {} make-category)
+	samples (map merge all-data (map (fn [x] {:weight x}) all-weights))]
+    (train initial-model samples)))
 
 (defn normalize [values]
   (map / values (repeat (reduce + values))))
