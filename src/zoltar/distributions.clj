@@ -2,6 +2,9 @@
       :doc "A simple, off-the-shelf classifier"}
   zoltar.distributions)
 
+;TODO: this is still a little gross - merge-dist shouldn't be
+;      part of the interface, instead there should be a separate
+;      DistributionMap protocol that takes care of dist + image-size?
 (defprotocol Distribution
   "Represents a probability mass function"
   (prob [dist x] "Probability of equality to a particular point")
@@ -14,9 +17,14 @@
 (defn raw-prob [dist point image-size]
   (/ (get dist point 0) (max 1 image-size)))
 
-; quick hack, will replace impl
-(memoize (defn pow2 [x] (if (= x 0) 1 (* 2 (pow2 (dec x)))))) 
-
+(memoize
+ (defn pow2 [x]
+   (if (= x 0)
+     1
+     (let [odd-contrib (inc (rem x 2))
+	   half-power (pow2 (quot x 2))]
+       (* half-power half-power odd-contrib)))))
+ 
 (defn bump-map [dist point radius finc]
   (let [r+ (inc radius)
 	make-point (fn [^Integer x]
@@ -41,10 +49,11 @@
   Distribution
   (prob [this x] (max floor (raw-prob dist x image-size)))
   (add-point [this x weight]
-    (let [finc (comp (partial * weight) scale-point)]
+    (let [finc (comp (partial * weight) scale-point)
+	  r+ (inc radius)]
       (-> this
-	  (assoc :image-size (+ (reduce + (map finc (range 1 (inc radius))))
-				(reduce + (map finc (range 1 (inc (inc radius)))))
+	  (assoc :image-size (+ (* 2 (reduce + (map finc (range 1 r+))))
+				(finc r+)
 				(get this :image-size 0)))
 	  (assoc :dist (bump-map dist x radius finc)))))
   (merge-dist [this other]
