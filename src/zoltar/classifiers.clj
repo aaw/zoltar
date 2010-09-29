@@ -92,13 +92,6 @@
 			(repeat {:features sample :category class}))]
     (reduce + (map * alphas indicators))))
 
-; TODO: make this implement Model protocol
-(defn composed-classifier [classifiers alphas classes]
-  (fn [sample]
-    (:class (reduce max-score
-      (pmap (fn score [class]
-	     {:class class :score (multi-classifier-score classifiers alphas class sample)}) classes)))))
-
 (defn parse-file-line [^String line]
   (let [line-seq (seq (.split line ","))]
     {:category (first line-seq)
@@ -136,16 +129,24 @@
 	new-values (map (comp (fn [^Double x] (Math/round x)) #(/ % smallest)) remove-zeros)]
     new-values))
 
+; TODO: make this implement Model protocol
+(defn composed-classifier [classifiers alphas classes]
+  (fn [sample]
+    (:class (reduce max-score
+      (pmap (fn score [class]
+	     {:class class :score (multi-classifier-score classifiers alphas class sample)}) classes)))))
+
 ; training-data is a vector of {:category :features}
 (defn boost-classifier [build-classifier training-data iterations]
   (let [classes (distinct (map :category training-data))
 	nclasses (count classes)
-	epsilon (/ 1 (* iterations (count training-data)))]
+	epsilon (/ 1 (* iterations (count training-data)))
+	make-weighted-sample (fn [sample weight] (assoc sample :weight weight))]
     (loop [iteration 1
 	   weights (take (count training-data) (repeat 1))
 	   alphas []
 	   classifiers []]
-      (let [classifier (build-classifier training-data weights)
+      (let [classifier (build-classifier (map make-weighted-sample training-data weights))
 	    classifier-indicator (map err-indicator (repeat classifier) training-data)
 	    err (/ (reduce + (map * weights classifier-indicator))
 		   (reduce + weights))
@@ -155,7 +156,7 @@
 			    (map * (repeat alpha) classifier-indicator ))))
 	    new-classifiers (conj classifiers classifier)
 	    new-alphas (conj alphas alpha)]
-        (println "Iteration " iteration ":")
+        (comment (println "Iteration " iteration ":"))
 	(if (< iteration iterations)
 	  (recur (inc iteration)
 		 new-weights
@@ -169,6 +170,17 @@
 	ind (fn [classy point] (if (= (classy (:features point)) (:category point)) 1 0))
 	score (reduce + (map ind (repeat classifier) data))]
     score))
+
+(defrecord BoostedBayesModel [categories create-category iterations]
+  Model
+  (train [this samples]
+	 (let [model (NaiveBayesModel. {} create-category)
+	       train-model (fn [samples] (train model samples))
+	       classifier (boost-classifier train-model samples iterations)]
+	   (assoc this :classifier classifier)))
+  (classify [this sample]
+	    ((:classifier this) sample))) 
+
 
 ;(composed-score 1 1000) -> 829
 ;(composed-score 2 1000) -> 258

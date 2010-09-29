@@ -72,22 +72,28 @@
 
 (deftest test-classify
   (testing
-    (is (= :long
-	   (-> (naive-bayes-model)
-	       (train [{:sample "a" :category :short}
-		       {:sample "fasdfsa" :category :long}])
-	       (classify "abcdefg"))))
-    (is (= :short
-	   (-> (naive-bayes-model)
-	       (train [{:sample "a"      :category :short}
+    (let [short-sample [{:sample "a" :category :short}
+			{:sample "fasdfsa" :category :long}]
+	  long-sample [{:sample "a"      :category :short}
 		       {:sample "ba"     :category :short}
                        {:sample "xx"     :category :short}
 		       {:sample "y"      :category :short}
 		       {:sample "sdfsa"  :category :long}
 		       {:sample "asdfda" :category :long}
 		       {:sample "ssssa"  :category :long}
-		       {:sample "asdfda" :category :long}])
-	       (classify "ad"))))))
+		       {:sample "asdfda" :category :long}]]
+      (is (= :long
+	     (-> (naive-bayes-model)
+		 (train short-sample)
+		 (classify "abcdefg"))))
+      (is (= :short
+	     (-> (naive-bayes-model)
+		 (train long-sample)
+		 (classify "ad"))))
+      (is (= :long
+	     (-> (boosted-bayes-model 10)
+		 (train long-sample)
+		 (classify "dafasdf")))))))
 
 (deftest test-normalize
   (testing
