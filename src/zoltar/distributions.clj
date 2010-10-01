@@ -17,13 +17,7 @@
 (defn raw-prob [dist point image-size]
   (/ (get dist point 0) (max 1 image-size)))
 
-(memoize
- (defn pow2 [x]
-   (if (= x 0)
-     1
-     (let [odd-contrib (inc (rem x 2))
-	   half-power (pow2 (quot x 2))]
-       (* half-power half-power odd-contrib)))))
+(defn pow2 [^Integer n] (bit-shift-left 1 n))
  
 (defn bump-map [dist point radius finc]
   (let [r+ (inc radius)

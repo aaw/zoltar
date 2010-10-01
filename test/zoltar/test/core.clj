@@ -98,7 +98,7 @@
 (deftest test-normalize
   (testing
     (is (= 1 (reduce + (normalize [1 1 1 1 1 1]))))
-    (is (= 1 (reduce + (normalize [0.01 0.02 0.03 0.05]))))
+    (is (= 1.0 (reduce + (normalize [0.01 0.02 0.03 0.05]))))
     (let [original [23 1 20 14]
 	  normalized (normalize original)]
       (is (= 1 (reduce + normalized)))
