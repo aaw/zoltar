@@ -3,4 +3,4 @@
   :url "http://github.com/aaw/zoltar"
   :warn-on-reflection true
   :dependencies [[org.clojure/clojure "1.3.0-alpha1"]]
-  :dev-dependencies [[swank-clojure "1.2.1"]])
+  :dev-dependencies [[swank-clojure "1.3.0-SNAPSHOT"]])
