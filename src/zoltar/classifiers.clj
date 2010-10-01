@@ -92,33 +92,6 @@
 			(repeat {:features sample :category class}))]
     (reduce + (map * alphas indicators))))
 
-(defn parse-file-line [^String line]
-  (let [line-seq (seq (.split line ","))]
-    {:category (first line-seq)
-     :sample (map #(Integer/parseInt %) (rest line-seq))}))
-
-; /home/aaron/development/machine-learning-datasets/letter-recognition.data.txt
-(defn read-data [^String filename]
-  (with-open [reader (java.io.BufferedReader. (java.io.FileReader. filename))]
-    (let [lseq (line-seq reader)]
-      (vec (map parse-file-line lseq)))))
-
-; just for testing
-(def all-data (read-data "/home/aaron/development/machine-learning-datasets/letter-recognition.data.txt"))
-(def tiny-data (take 100 all-data))
-
-; 1 iteration on 100 samples -> 53
-; 20 iterations on 100 samples -> 52
-; 100 iterations on 100 samples -> 27
-(defn boosted-bayes [all-data all-weights]
-  (let [dist (floored-distribution)
-	data-width (count (:sample (first all-data)))
-	make-category (fn [] (vec (for [i (range data-width)]
-				    {:dist dist :testfunc #(nth % i)})))
-	initial-model (NaiveBayesModel. {} make-category)
-	samples (map merge all-data (map (fn [x] {:weight x}) all-weights))]
-    (train initial-model samples)))
-
 (defn normalize [values]
   (map / values (repeat (reduce + values))))
 
@@ -164,39 +137,14 @@
 		 new-classifiers)
 	  (composed-classifier new-classifiers new-alphas classes))))))
 
-(defn composed-score [iterations num-items]
-  (let [data (take num-items all-data)
-	classifier (boost-classifier boosted-bayes data iterations)
-	ind (fn [classy point] (if (= (classy (:features point)) (:category point)) 1 0))
-	score (reduce + (map ind (repeat classifier) data))]
-    score))
-
 (defrecord BoostedBayesModel [categories create-category iterations]
   Model
   (train [this samples]
-	 (let [model (NaiveBayesModel. {} create-category)
+	 (let [model (NaiveBayesModel. categories create-category)
 	       train-model (fn [samples] (train model samples))
 	       classifier (boost-classifier train-model samples iterations)]
 	   (assoc this :classifier classifier)))
   (classify [this sample]
 	    ((:classifier this) sample))) 
 
-
-;(composed-score 1 1000) -> 829
-;(composed-score 2 1000) -> 258
-;(composed-score 10 1000) -> 884
-
-;(composed-score 1 200) -> 197 (16 secs)
-;(composed-score 2 200) -> 177 (33 secs)
-;(composed-score 3 200) -> 197
-;(composed-score 4 200) -> 178
-;(composed-score 5 200) -> 197
-;(composed-score 10 200) -> 178
-;(composed-score 20 200) -> 199
-;(composed-score 30 200) -> 199
-;(composed-score 50 200) -> 199
-
-;(composed-score 1 2000) -> 1593
-;(composed-score 2 2000) -> 625
-;(composed-score 10 2000) -> 1744
 

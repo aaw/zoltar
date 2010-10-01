@@ -104,11 +104,3 @@
       (is (= 1 (reduce + normalized)))
       (is (= (map / normalized original))))))
 
-(deftest test-boostable-bayes
-  (testing
-    (is (= :C
-	     (-> (boosted-bayes [{:category :A :sample [12]}
-				 {:category :B :sample [2]}
-				 {:category :C :sample [100]}]
-				[1 1 1])
-		 (classify [100]))))))
