@@ -14,5 +14,8 @@
    {:dist (exponential-sandpile-distribution)
     :testfunc (fn [x] (count-occur x "-")) }])
 
-
+(defn make-passthrough-categories [dimension]
+  (for [i (range dimension)]
+    {:dist (floored-distribution)
+     :testfunc #(nth % i)}))
 

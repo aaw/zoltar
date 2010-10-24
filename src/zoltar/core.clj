@@ -3,7 +3,8 @@
   zoltar.core
   (:use zoltar.feature_testers
 	zoltar.distributions
-	zoltar.classifiers)
+	zoltar.classifiers
+	zoltar.util)
   (:import [zoltar.classifiers NaiveBayesModel])
   (:import [zoltar.classifiers BoostedBayesModel]))
 
@@ -12,3 +13,4 @@
 
 (defn boosted-bayes-model [iterations]
   (BoostedBayesModel. {} make-basic-categories iterations))
+

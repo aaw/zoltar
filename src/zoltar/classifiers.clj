@@ -1,7 +1,8 @@
 (ns ^{:author "Aaron Windsor",
       :doc "A simple, off-the-shelf classifier"}
   zoltar.classifiers
-  (:use zoltar.feature_testers
+  (:use clojure.contrib.math
+        zoltar.feature_testers
 	zoltar.distributions))
 
 ;tester is a map of the form:
@@ -14,9 +15,6 @@
 	reconstruct-tester (fn [orig-tester new-dist]
 			     {:testfunc (:testfunc orig-tester) :dist new-dist})]
     {:category category :features (map reconstruct-tester testers (map add-single-point testers))}))
-
-(defn test-tester [tester sample]
-  (prob (:dist tester) ((:testfunc tester) sample)))
 
 (defprotocol Model
   ""
@@ -72,11 +70,13 @@
     (let [initial-category (create-category)]
 	 (assoc this :categories
 		(combine-categories (map train-tester (repeat initial-category) samples) initial-category))))
-  (classify [this sample] 
-    (:category (reduce max-score
-		       (for [{category :category features :features} (seq categories)]
-			 (let [score (reduce * (map test-tester features (repeat sample)))]
-			   {:category category :score score}))))))
+  (classify [this sample]
+    (let [test-tester (fn [tester sample]
+			(prob (:dist tester) ((:testfunc tester) sample)))]
+      (:category (reduce max-score
+        (for [{category :category features :features} (seq categories)]
+	  (let [score (reduce * (map test-tester features (repeat sample)))]
+	    {:category category :score score})))))))
   
 (defn generic-indicator [classifier point match-val non-match-val]
   (if (= (classify classifier (:features point)) (:category point)) match-val non-match-val))
@@ -96,10 +96,11 @@
   (map / values (repeat (reduce + values))))
 
 (defn integerize [values]
-  (let [epsilon 0.001
+  (let [accuracy 6 ; = # decimal places accuracy
+	scale (expt 10 accuracy)
+	epsilon (/ 1 scale)
 	remove-zeros (map #(if (<= % epsilon) epsilon %) values)
-	smallest (apply min remove-zeros)
-	new-values (map (comp (fn [^Double x] (Math/round x)) #(/ % smallest)) remove-zeros)]
+	new-values (map (comp (fn [x] (round x)) #(* % scale)) remove-zeros)]
     new-values))
 
 ; TODO: make this implement Model protocol
@@ -124,9 +125,17 @@
 	    err (/ (reduce + (map * weights classifier-indicator))
 		   (reduce + weights))
 	    alpha (+ (Math/log (/ (- 1 err) (max err epsilon))) (Math/log (- nclasses 1)))
-	    new-weights (integerize (map * weights
+	    _ (prn classifier-indicator)
+	    _ (prn err)
+	    _ (prn alpha)
+	    _ (prn weights)
+	    _ (prn "-------------------------------------------------")
+	    _ (prn (normalize (map * weights
 			  (map #(Math/exp %)
-			    (map * (repeat alpha) classifier-indicator ))))
+			    (map * (repeat alpha) classifier-indicator )))))
+	    new-weights (integerize (normalize (map * weights
+			  (map #(Math/exp %)
+			    (map * (repeat alpha) classifier-indicator )))))
 	    new-classifiers (conj classifiers classifier)
 	    new-alphas (conj alphas alpha)]
         (comment (println "Iteration " iteration ":"))
@@ -145,6 +154,5 @@
 	       classifier (boost-classifier train-model samples iterations)]
 	   (assoc this :classifier classifier)))
   (classify [this sample]
-	    ((:classifier this) sample))) 
-
+	    ((:classifier this) sample)))
 

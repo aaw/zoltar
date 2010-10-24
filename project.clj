@@ -2,5 +2,6 @@
   :description "A Clojure classifier"
   :url "http://github.com/aaw/zoltar"
   :warn-on-reflection true
-  :dependencies [[org.clojure/clojure "1.3.0-alpha1"]]
+  :dependencies [[org.clojure/clojure "1.3.0-alpha1"]
+		 [org.clojure.contrib/math "1.3.0-alpha1"]]
   :dev-dependencies [[swank-clojure "1.3.0-SNAPSHOT"]])
