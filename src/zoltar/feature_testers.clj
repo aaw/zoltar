@@ -16,6 +16,6 @@
 
 (defn make-passthrough-categories [dimension]
   (for [i (range dimension)]
-    {:dist (floored-distribution)
+    {:dist (linear-sandpile-distribution)
      :testfunc #(nth % i)}))
 

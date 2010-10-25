@@ -79,7 +79,7 @@
 	    {:category category :score score})))))))
   
 (defn generic-indicator [classifier point match-val non-match-val]
-  (if (= (classify classifier (:features point)) (:category point)) match-val non-match-val))
+  (if (= (classify classifier (:sample point)) (:category point)) match-val non-match-val))
 
 (defn indicator [classifier point]
   (generic-indicator classifier point 1 0))
@@ -100,7 +100,7 @@
 	scale (expt 10 accuracy)
 	epsilon (/ 1 scale)
 	remove-zeros (map #(if (<= % epsilon) epsilon %) values)
-	new-values (map (comp (fn [x] (round x)) #(* % scale)) remove-zeros)]
+	new-values (map (comp #(round %) #(* % scale)) remove-zeros)]
     new-values))
 
 ; TODO: make this implement Model protocol
@@ -125,17 +125,16 @@
 	    err (/ (reduce + (map * weights classifier-indicator))
 		   (reduce + weights))
 	    alpha (+ (Math/log (/ (- 1 err) (max err epsilon))) (Math/log (- nclasses 1)))
-	    _ (prn classifier-indicator)
-	    _ (prn err)
-	    _ (prn alpha)
-	    _ (prn weights)
-	    _ (prn "-------------------------------------------------")
-	    _ (prn (normalize (map * weights
-			  (map #(Math/exp %)
-			    (map * (repeat alpha) classifier-indicator )))))
-	    new-weights (integerize (normalize (map * weights
-			  (map #(Math/exp %)
-			    (map * (repeat alpha) classifier-indicator )))))
+	    ;_ (prn classifier-indicator)
+	    ;_ (prn (float err))
+	    ;_ (prn alpha)
+	    ;_ (prn weights)
+	    new-weights ((comp integerize normalize)
+			  (map * weights
+			    (map #(Math/exp %)
+			      (map * (repeat alpha) classifier-indicator ))))
+	    ;_ (prn new-weights)
+	    ;_ (prn "-------------------------------------------------")
 	    new-classifiers (conj classifiers classifier)
 	    new-alphas (conj alphas alpha)]
         (comment (println "Iteration " iteration ":"))
