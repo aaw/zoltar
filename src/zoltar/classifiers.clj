@@ -89,11 +89,14 @@
 
 (defn multi-classifier-score [classifiers alphas class sample]
   (let [indicators (map indicator classifiers
-			(repeat {:features sample :category class}))]
+			(repeat {:sample sample :category class}))]
     (reduce + (map * alphas indicators))))
 
 (defn normalize [values]
   (map / values (repeat (reduce + values))))
+
+;hack to get round to work on clojure.lang.BigInt
+(defmethod round clojure.lang.BigInt [n] n)
 
 (defn integerize [values]
   (let [accuracy 6 ; = # decimal places accuracy
@@ -125,16 +128,10 @@
 	    err (/ (reduce + (map * weights classifier-indicator))
 		   (reduce + weights))
 	    alpha (+ (Math/log (/ (- 1 err) (max err epsilon))) (Math/log (- nclasses 1)))
-	    ;_ (prn classifier-indicator)
-	    ;_ (prn (float err))
-	    ;_ (prn alpha)
-	    ;_ (prn weights)
 	    new-weights ((comp integerize normalize)
 			  (map * weights
 			    (map #(Math/exp %)
 			      (map * (repeat alpha) classifier-indicator ))))
-	    ;_ (prn new-weights)
-	    ;_ (prn "-------------------------------------------------")
 	    new-classifiers (conj classifiers classifier)
 	    new-alphas (conj alphas alpha)]
         (comment (println "Iteration " iteration ":"))
