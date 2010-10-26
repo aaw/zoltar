@@ -25,13 +25,5 @@
 (def letters-dataset (read-data letters-datafile parse-letters-line))
 (def iris-dataset (shuffle (read-data iris-datafile parse-iris-line)))
 
-(def datasets { :letters letters-dataset :iris iris-dataset })
 
-(defn k-fold-cross-validation [model data k]
-  (let [partitions (partition-all k data)
-	num-partitions (count partitions)
-	exclude-nth (fn [s n] (flatten (concat (take n s) (drop (inc n) s))))
-	score (fn [model samples] (/ (reduce + (map indicator (repeat model) samples)) (count samples)))
-	avg (fn [xs] (/ (apply + xs) (count xs)))
-	kth-score (fn [k] (-> model (train (exclude-nth partitions k)) (score (nth partitions k))))]
-    (avg (map kth-score (range num-partitions)))))
+
